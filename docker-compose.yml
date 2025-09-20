@@ -1,0 +1,19 @@
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    env_file:
+      - .env
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
