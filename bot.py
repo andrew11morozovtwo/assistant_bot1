@@ -55,6 +55,7 @@ def get_environment_variable(key, required=True):
 
 # Получение токена Telegram API
 API_TOKEN = get_environment_variable('TELEGRAM_BOT_TOKEN')
+#API_TOKEN="7168557997:AAGzKOTcg5GfONohwI7UeVSiJETV_-oLzgc"
 if not API_TOKEN:
     print("Ошибка: Не найден TELEGRAM_BOT_TOKEN в переменных окружения")
     print("Создайте файл .env с содержимым:")
@@ -66,14 +67,26 @@ bot = telebot.TeleBot(API_TOKEN)
 
 # Получение API-ключа OpenAI
 OPENAI_API_KEY = get_environment_variable('OPENAI_API_KEY')
+#OPENAI_API_KEY="sk-XXXX"
 if not OPENAI_API_KEY:
     print("Ошибка: Не найден OPENAI_API_KEY в переменных окружения")
     sys.exit(1)
 
+# Базовый URL для OpenAI / proxyapi (можно переопределить через переменную окружения)
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.proxyapi.ru/openai/v1")
+
 # Настройка OpenAI
 client = OpenAI(
     api_key=OPENAI_API_KEY,
-    base_url="https://api.proxyapi.ru/openai/v1",
+    base_url=OPENAI_BASE_URL,
+)
+
+# Логируем ключевые параметры подключения к OpenAI / proxyapi (без раскрытия ключа)
+logging.info(
+    "Инициализация OpenAI клиента: base_url=%s, api_key_prefix=%s***, api_key_len=%d",
+    OPENAI_BASE_URL,
+    OPENAI_API_KEY[:5],
+    len(OPENAI_API_KEY),
 )
 
 # Путь к файлу логов (локальный или в контейнере)
@@ -162,7 +175,7 @@ def send_welcome(message):
     # Инициализация истории разговора для нового чата
     if chat_id not in conversation_history:
         conversation_history[chat_id] = []
-    bot.reply_to(message, "Добро пожаловать в канал 'Это не канал'! Как я могу помочь? Бот версии 21_01_2025 г")
+    bot.reply_to(message, "Добро пожаловать в канал 'Это не канал'! Как я могу помочь? Бот версии 14_02_2026 г")
 
 # Обработка текстовых сообщений
 @bot.message_handler(content_types=['text'])
@@ -224,6 +237,10 @@ def handle_photo_message(message):
 
     try:
         # Запрашиваем описание изображения у OpenAI
+        logging.info(
+            "Вызов OpenAI chat.completions (описание изображения). Модель=gpt-4o-mini, image_url=%s",
+            image_url,
+        )
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -325,6 +342,10 @@ def handle_pdf_message(message):
 
     try:
         # Запрашиваем анализ PDF документа у OpenAI
+        logging.info(
+            "Вызов OpenAI chat.completions (анализ PDF). Модель=gpt-4o-mini, длина_текста=%d",
+            len(pdf_text),
+        )
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -393,6 +414,11 @@ def handle_voice_message(message):
         audio_file = io.BytesIO(response.content)
 
         # Транскрибируем аудио
+        logging.info(
+            "Вызов OpenAI audio.transcriptions.create (voice). Модель=whisper-1, file_path=%s, размер_байт=%d",
+            file_path,
+            len(response.content),
+        )
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
             file=(file_path, audio_file)  # Передаем имя файла и объект BytesIO
@@ -434,6 +460,11 @@ def handle_audio_message(message):
         audio_file = io.BytesIO(response.content)
 
         # Транскрибируем аудио
+        logging.info(
+            "Вызов OpenAI audio.transcriptions.create (audio). Модель=whisper-1, file_path=%s, размер_байт=%d",
+            file_path,
+            len(response.content),
+        )
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
             file=(file_path, audio_file)  # Передаем имя файла и объект BytesIO
@@ -491,6 +522,11 @@ def process_message(message, user_message, message_type, chat_id):
     logging.info(f"Получено сообщение от пользователя: {user_message} (Тип: {message_type})")
     # Запрос к OpenAI с историей разговора
     try:
+        logging.info(
+            "Вызов OpenAI chat.completions (основной ответ). Модель=gpt-3.5-turbo-1106, длина_истории=%d, длина_сообщения=%d",
+            len(conversation_history[chat_id]),
+            len(user_message),
+        )
         chat_completion = client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
             messages=conversation_history[chat_id] + [

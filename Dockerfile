@@ -1,30 +1,50 @@
-# 1. Базовый образ
+# Используем Python 3.11 slim образ для меньшего размера
 FROM python:3.11-slim
 
-# 2. Установка системных зависимостей (для lxml и других)
+# Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
     libxml2-dev \
     libxslt-dev \
+    libffi-dev \
+    libssl-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Создание рабочего каталога
+# Создаем пользователя для безопасности
+RUN groupadd -r botuser && useradd -r -g botuser botuser
+
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# 4. Копирование зависимостей и установка pip-пакетов
+# Копируем файл зависимостей
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Копирование исходного кода
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Копируем исходный код
 COPY bot.py .
 COPY run_bot.py .
-# Если нужны другие файлы — добавьте COPY
 
-# 7. Создание папок для логов и данных
-RUN mkdir -p /app/logs /app/data
+# Копируем .env файл из корня проекта
+COPY .env .env
 
-# 8. Открытие порта (если нужно)
-EXPOSE 8080
+# Создаем необходимые директории
+RUN mkdir -p /app/logs /app/data && \
+    chown -R botuser:botuser /app
 
-# 9. Стартовая команда
-CMD ["python", "bot.py"]
+# Переключаемся на пользователя botuser
+USER botuser
+
+# Устанавливаем переменные окружения
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Команда запуска
+CMD ["python", "-m", "bot"]

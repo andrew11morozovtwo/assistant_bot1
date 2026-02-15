@@ -1,4 +1,4 @@
-# Логи и данные
+# Логи и данные (исключаем из контейнера)
 *.log
 *.csv
 logs/
@@ -10,36 +10,55 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-env/
 venv/
 .venv/
+.pytest_cache/
 
 # Системные файлы
 .DS_Store
 Thumbs.db
+*.tmp
+*.temp
 
 # Git
 .git/
 .gitignore
 
-# IDE
+# IDE и редакторы
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-*
 
 # Временные файлы
 *.tmp
 *.temp
+*.bak
 
-# Документация
+# Документация (оставляем только README)
 *.md
 !README.md
 
 # Bat файлы (только для Windows)
 *.bat
+*.cmd
 
-# Docker файлы
+# Docker файлы (исключаем из контекста сборки)
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+# Переменные окружения (кроме .env - он нужен в образе)
+# .env - НЕ исключаем, он нужен в образе
+.env.local
+.env.production
+
+# Тестовые файлы
+test_*
+*_test.py
+tests/
+
+# Backup файлы
+*.backup
+*.old
